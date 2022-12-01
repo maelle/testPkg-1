@@ -12,40 +12,30 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       version-name: RELEASE_3_16
 
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Query dependencies
-        run: |
-          BiocManager::install("remotes")
-          saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
-        shell: Rscript {0}
+      - uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Install Dependencies
-        run: |
-          options(repos = c(CRAN = "https://packagemanager.rstudio.com/cran/__linux__/jammy/latest"))
-          remotes::install_deps(dependencies = TRUE, repos = BiocManager::repositories())
-          BiocManager::install(c("rcmdcheck", "pkgdown"), ask = FALSE, update = TRUE)
-        shell: Rscript {0}
-
-      - name: System dependencies
-        run: |
-          pip install ghp-import
-
-      - name: Build pkgdown
-        run: |
-           PATH=$PATH:$HOME/bin/ Rscript -e 'pkgdown::build_site()'
-
-      - name: Install deploy dependencies
-        run: |
-          apt-get update
-          apt-get -y install rsync
-
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4.3.3
+      - uses: r-lib/actions/setup-r@v2
         with:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages # The branch the action should deploy to.
-          FOLDER: docs # The folder the action should deploy.
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
+
+      - name: Build site
+        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+        shell: Rscript {0}
+
+      - name: Deploy to GitHub pages 🚀
+        if: github.event_name != 'pull_request'
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          clean: false
+          branch: gh-pages
+          folder: docs
 
