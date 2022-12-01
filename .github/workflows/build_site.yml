@@ -1,4 +1,4 @@
-name: Release R CMD check and build site
+name: Release R CMD check + build site
 
 on: push
 
